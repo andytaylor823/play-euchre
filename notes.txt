@@ -1,0 +1,37 @@
+These are my notes for my euchre program I am writing. Until I finish the baseline program, it will likely contain a lot of data about special cases I notice that I need to hard-code in later.
+
+
+What I have left to do in the baseline program:
+--Keep global track of who called trump
+--Write a program that can play a card and remove it from the hand (and test), very basic
+--Write the logic behind which card is best to play (and test)
+--Write the logic behind how to lead (and test)
+--Keep track of who is winning the trick so far
+--Keep global track of how many tricks each team has won
+--Combine all this into a single program that is called something like "play_a_hand", and have it return who called trump, how many tricks each got, alone or not, and any other relevant information
+
+
+What I want the baseline program to do / what I want to do with it:
+--Run N hands with a certain set of conditions and tell me the effectiveness of those conditions (and the error on that)
+--Force a certain player to have a certain hand and call it or not N times to see the expected value (and the error on it)
+--Figure out the best hand strength to call trump on
+--Find out how much to scale the opponent and partner first-round-calling "coefficients"
+--Estimate how much the dealer('s team) has an advantage
+
+
+To do after I finish the baseline program:
+--Add in total number of suits as a component of hand power when calling trump
+--Add in going alone
+--Keep score!
+--Certain aces are more likely to go through than others (eg if you have two more of that same suit in your hand, it's less likely); account for this
+--Order hand after each card played
+--Have o1's hand score be affected by whether or not they have an ace (BUT SPECIFICALLY NOT THE ACE OF TRUMP)
+
+
+
+Special cases:
+--The computer ordered it up to their opponent with right + left, when they could have passed it all the way around to call it in the second round
+--If (the other team called trump) and (you are leading)? and (you are sitting to the right of the person who called trump) and (you don't have an ace you think will go through): then lead a card of the suit that has already been played to put the caller in an awkward spot
+--If (my partner called trump) and (I have the lead) and (I have a bar): then lead it
+
+
