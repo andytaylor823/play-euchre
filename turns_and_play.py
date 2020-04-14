@@ -1,180 +1,172 @@
+# This file has been checked through, and it is compatible with the board and isleft/isright updates
+# This file is also compatible with the "__eq__" and "__str__" updates.
+# It is as efficient as I think it can be right now.
+# Most recent check: 12/6/2019
+
 import random
 import basicprogs as b
 import call
 import lead
 import play_card as pc
 import showturn as s
+import boardstate_class as bsc
+import forced_hand as fh
+import points
+import lead_alone
+import leading_logic
+import leading_alone_logic
 
-def play_a_hand(ns_score, ew_score):
+def play_a_hand(board, forced_hands = [], forced_hand_positions = [], prevent_firstround_callers = [], prevent_secondround_callers = [], enable_alone = True, only_accept_alone = False, pass_condition = None):
 
-	hands = b.deal()
-	s.show_turn(hands, 'o1', trump_suit = 'null')
-	trump_suit, caller_pos, called_first_round, turn_card = call_trump(hands)
-	if called_first_round:
-		hands[3] = call.dealer_new_hand(hands[3], hands[-1][0])
-		b.order_hand(hands[3], trump_suit = trump_suit)
-	print(trump_suit, called_first_round, caller_pos)
-
-	for hand in hands:
-		for card in hand:
-			card.set_trump(trump_suit)
-
-	allhands = [hands[i] for i in range(4)]
-	winner_pos = 'o1'
-	winners = []
+	# does all of the setup for one hand
+	setup(board, forced_hands, forced_hand_positions, prevent_firstround_callers, prevent_secondround_callers, enable_alone)
+	
+	if pass_condition is not None:
+		if pass_condition(board):
+			board.trump_suit = 'pass'
+			return
+	if board.trump_suit == 'null':	return		# happens if no one calls it
+	
+	# allow this option
+	if only_accept_alone:
+		if not board.going_alone:
+			return
+	
+	# play 5 tricks
 	for i in range(5):
-		allhands, winner_pos = play_a_trick(allhands, trump_suit, winner_pos, caller_pos)
-		winners.append(winner_pos)
+		play_a_trick(board)
 	
-	delta_ns, delta_ew = points(winners, caller_pos)
-	ns_score += delta_ns
-	ew_score += delta_ew
+	# add points
+	points.add_points(board)
+	if board.show_each_turn:	print(board.hand_result.capitalize())
+
+def setup(board, forced_hands, forced_hand_positions, prevent_firstround_callers, prevent_secondround_callers, enable_alone):
+
+	# create a deck and deal out the cards
+	hands = fh.hands(forced_hands, forced_hand_positions)
 	
-	return(ns_score, ew_score)
-
-
-def play_a_trick(allhands, trump_suit, leader_pos, caller_pos):
-
-	allpos = ['o1', 'p', 'o2', 'd']
-	idx = allpos.index(leader_pos)
+	# do some "board" bookkeeping (create the pos_hand dictionary, reset all the lead/winner stats, etc.)
+	# only the turn card has been set to trump
+	board.new_hand(hands)
 	
-	# need to check this
-	cards_played = []
+	# calls trump and sets all cards to trump accordingly
+	# the dealer has not taken the turn card into their hand (yet)
+	call_trump(board, prevent_firstround_callers, prevent_secondround_callers)
+	if board.trump_suit == 'null':	return	# happens if no one calls it
+	if not enable_alone:		board.going_alone = False
+	
+	if board.going_alone:	adjust_partner_hand(board)
+	
+	# show the board state before anyone plays a card
+	show(board)
+	
+	# re-order all hands				
+	for p in board.pos_hand_dict:
+		b.order_hand(board.pos_hand_dict[p], trump_suit = board.trump_suit)
+	
+	if board.going_alone:
+		if board.caller_pos == 'o2':
+			board.leader_pos, board.winner_pos = ['p', 'p']
+
+def play_a_trick(board):
+
+	board.new_trick(board.winner_pos)
+	idx = board.allpos.index(board.leader_pos)
+	
 	for i in range(4):
 		k = (i + idx)%4
-		allhands[k], card_to_play = play_a_card(allhands[k], allpos[k], caller_pos, trump_suit, cards_played)
-		cards_played.append(card_to_play)
-		s.show_turn(allhands, leader_pos, trump_suit = trump_suit, cards_played = cards_played)
-		wait = 'z'
-		while wait != 'c':
-			if wait.lower() == 'x':		exit(10)
-			wait = input('enter "c" to continue, "x" to exit: ')
+		play_a_card(board, board.allpos[k])
+		show(board)
 	
-#	winner_pos = find_winner(leader_pos, cards_played)
-	# should be 4 cards played, so the leader_pos that pc.current_winner finds
-	# should be the same as the input pos, so I feed it the actual leader_pos
-	dummy, winner_pos = pc.current_winner(leader_pos, cards_played)
-	return(allhands, winner_pos)
+	board.end_trick()
 
 # this function should be solely syntax
-def play_a_card(hand, pos, caller_pos, trump_suit, cards_played = []):
+def play_a_card(board, pos):
 
-	if len(cards_played) == 0:
-		c1 = lead.pick_lead_card(hand, pos, caller_pos)
-		card_to_play = b.make_copy(c1)
-		for card in hand:
-			if card.is_match(card_to_play):
-				card.set_null()
+	if len(board.cards_played) == 0:
+		if board.going_alone and pos == board.caller_pos:
+			c1 = leading_alone_logic.return_card(board, pos)
+#			c1 = lead_alone.lead_alone(board, pos)
+		else:
+			c1 = leading_logic.return_card(board, pos)
+#			c1 = lead.pick_lead_card(board, pos)	
+	else:		
+		c1 = pc.pick_nonlead_card(board, pos)
 	
-	else:
-		c1 = pc.pick_nonlead_card(hand, pos, caller_pos, cards_played, trump_suit)
-		card_to_play = b.make_copy(c1)
-		for card in hand:
-			if card.is_match(card_to_play):
-				card.set_null()
+	board.play_card(c1.copy(), pos)
 
-	return(hand, card_to_play)
 
-# returns:  trump_suit, caller_pos, called_first_round, turn_card
-def call_trump(hands):
-
-	[o1hand, phand, o2hand, dhand, kitty] = hands
-	allhands = [o1hand, phand, o2hand, dhand]
-	allpos = ['o1', 'p', 'o2', 'd']
+def call_trump(board, prevent_firstround_callers, prevent_secondround_callers):
 	
-	turn_card = kitty[0]
-	trump_suit = turn_card.suit
-	turn_card.print_card()
+	# call trump in the first round
+	call_trump_first_round(board, prevent_firstround_callers)
+	
+	# add the turn card to the dealer's hand
+	if board.called_first_round:
+		board.pos_hand_dict['d'] = call.dealer_new_hand(board.pos_hand_dict['d'], board.turn_card.copy())
+		return
+	
+	# if you made it to here, trump was not called in the first round
+	board.turn_card.remove_trump()
+	call_trump_second_round(board, prevent_secondround_callers)
+	if board.trump_suit != 'null':	return
+	
+	# if you made it to here, trump was not called in the second round, either
+	if board.alert_no_call:		print('No trump was called -- re-deal.')
+	board.call_trump('null', 'd', False, False)
+
+def call_trump_first_round(board, prevent_firstround_callers):
 	
 	# go through first round
-	for i in range(len(allpos)):
-		trump_called = call.call_first_round(allhands[i], turn_card, allpos[i])
+	# loop over all players' positions
+	for pos in board.all_pos:
+		# see if their hand is good enough to order it up
+		# call_first_round leaves only the turn card as trump
+		if pos in prevent_firstround_callers:	continue
+		trump_called, going_alone = call.call_first_round(pos, board)
+		
+		# if they order it up, then set all cards to trump accordingly
 		if trump_called:
-			for h in hands:
-				for c in h:
-					c.remove_trump()
-					c.set_trump(trump_suit)
-			return(turn_card.suit, allpos[i], True, turn_card)
-	
-	for h in hands:
-		for c in h:
-			c.remove_trump()
-	# if you made it to here, trump was not called in the first round
-	for i in range(len(allpos)):
-		trump_suit = call.call_second_round(allhands[i], turn_card, allpos[i])
+			for p in board.pos_hand_dict:
+				for c in board.pos_hand_dict[p]:
+					c.set_trump(board.turn_card.suit)
+			# after all trump cards have been set, do some "board" class bookkeeping
+			board.call_trump(board.turn_card.suit, pos, True, going_alone)
+			return
+
+def call_trump_second_round(board, prevent_secondround_callers):
+
+	# now, loop over all players' positions again
+	for pos in board.all_pos:
+		# see if their hand is good enough to call trump in the 2nd round
+		# "trump_suit": String, either a suit name or "null" if trump was not called
+		if pos in prevent_secondround_callers:	continue
+		trump_suit, going_alone = call.call_second_round(pos, board)
+		
+		# if so, then set all cards to trump accordingly
 		if trump_suit != "null":
-			for h in hands:
-				for c in h:
+			for p in board.pos_hand_dict:
+				for c in board.pos_hand_dict[p]:
 					c.set_trump(trump_suit)
-			return(trump_suit, allpos[i], False, turn_card)
-	
+			# after all trump cards have been set, do some "board" class bookkeeping
+			board.call_trump(trump_suit, pos, False, going_alone)
+			return
 
+# asks for input to slow down the display of each turn
+def show(board):
 
+	if board.show_each_turn:
+		s.show_turn(board)
+		wait = 'z'
+		while wait.lower() != 'c':
+			if wait.lower() == 'x':		exit(10)
+			wait = input('enter "c" to continue, "x" to exit: ')
 
-# this is syntax
-# TODO:
-# this does the same thing as a function in "play_card" -- make one the best and kill the other
-def find_winner(leader_pos, cards_played):
+# if one player is going alone, their partner gets a dead hand
+def adjust_partner_hand(board):
 
-	for card in cards_played:
-		if card.istrump == True:
-			powers = [call.card_power(x) for x in cards_played]
-			idx = powers.index(max(powers))
-			break
-
-		lead_card = cards_played[0]
-		idx = 0
-		for card in cards_played:
-			if card.suit == lead_card.suit and call.card_power(card) > call.card_power(cards_played[idx]):
-				idx = cards_played.index(card)	
-		
-	allpos = ['o1', 'p', 'o2', 'd']
-	leader_idx = allpos.index(leader_pos)
-	winner_pos = allpos[(leader_idx + idx)%4]
-	return(winner_pos)
-
-
-# this is just implementing the scoring
-def points(winners, caller_pos):
-
-	if len(winners) != 5:
-		print ('error in winners')
-		exit(10)
-		
-	allpos = ['o1', 'p', 'o2', 'd']
-	num_tricks_ns = 0
-	num_tricks_ew = 0
-	for pos in winners:
-		if pos == 'o1' or pos == 'o2':	num_tricks_ew += 1
-		elif pos == 'p' or pos == 'd':	num_tricks_ns += 1
-		else:
-			print('error in scoring')
-			exit(10)
+	partner_pos = b.partner(board.caller_pos)
+	dead_card = b.card('null', 'null')
+	board.pos_hand_dict[partner_pos] = [dead_card.copy() for i in range(5)]
 	
 	
-	if caller_pos == 'o1' or caller_pos == 'o2':
-		if num_tricks_ew == 5:
-			p_ns = 0
-			p_ew = 2
-		elif num_tricks_ew >= 3 and num_tricks_ew < 5:
-			p_ns = 0
-			p_ew = 1
-		else:
-			p_ns = 2
-			p_ew = 0	
-		
-	else:
-		if num_tricks_ns == 5:
-			p_ns = 2
-			p_ew = 0
-		elif num_tricks_ns >= 3 and num_tricks_ns < 5:
-			p_ns = 1
-			p_ew = 0
-		else:
-			p_ns = 0
-			p_ew = 2
-
-	return(p_ns, p_ew)
-
-
-

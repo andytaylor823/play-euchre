@@ -1,18 +1,15 @@
 import random
 import basicprogs as b
+import boardstate_class as bsc
 
-def show_turn(hands, leader_pos, trump_suit, cards_played = []):
-	opphand1 = hands[0]
-	partnerhand = hands[1]
-	opphand2 = hands[2]
-	dealerhand = hands[3]
-	
+def show_turn(board):
+		
 	print('--------------------------------')
-	print_partner_hand(hands)
-	print_opp_hand(hands, leader_pos, trump_suit, cards_played)
-	print_dealer_hand(hands)
+	print_partner_hand(board)
+	print_opp_hand(board)
+	print_dealer_hand(board)
 	print('--------------------------------')
-	#print_extras(trump_suit, ns_score, ew_score, caller_pos)
+	print_extras(board)
 
 def hand_suits_short(hand):
 	
@@ -40,45 +37,40 @@ def shorten_card_name(card):
 	elif card.name == "nine":	return("9")
 	else:				return(card.name[0].capitalize() + card.name[1])
 
-def print_partner_hand(hands):
+def print_partner_hand(board):
 
-	partnerhand = hands[1]
-	dealerhand = hands[3]
+	phand = board.pos_hand_dict['p']
+	dhand = board.pos_hand_dict['d']
 	line1 = "\t"
 	line2 = line1
+
+	pshortnames = hand_names_short(phand)
+	pshortsuits = hand_suits_short(phand)
 	
-	shortnames = hand_names_short(partnerhand)
-	shortsuits = hand_suits_short(partnerhand)
-	dshortnames = hand_names_short(dealerhand)
-	dshortsuits = hand_suits_short(dealerhand)
-	
-	for i in range(len(shortnames)):
-		name = shortnames[i]
-		suit = shortsuits[i]
-		dname = dshortnames[i]
-		dsuit = dshortsuits[i]
+	for i in range(len(pshortnames)):
+		pname = pshortnames[i]
+		psuit = pshortsuits[i]
 		
-		if name == "9":	line1 += "  " + name
-		else:		line1 += " " + name
-		line2 += "  " + suit
+		if pname == "9":	line1 += "  " + pname
+		else:			line1 += " " + pname
+		line2 += "  " + psuit
 	
 	print(line1)
 	print(line2)
 
-def print_opp_hand(hands, leader_pos, trump_suit = 'null', cards_played = []):
+def print_opp_hand(board):
 
-	opphand1 = hands[0]
-	partnerhand = hands[1]
-	opphand2 = hands[2]
-	dealerhand = hands[3]
+	o1hand, phand, o2hand, dhand = [board.pos_hand_dict[pos] for pos in ['o1', 'p', 'o2', 'd']]
+		
+	fns = [hand_names_short]*2 + [hand_suits_short]*2
+	hs = [o1hand, o2hand, o1hand, o2hand]
+	shortnames1, shortnames2, shortsuits1, shortsuits2 = [fn(h) for fn, h in zip(fns, hs)]
 	
-	shortnames1 = hand_names_short(opphand1)
-	shortnames2 = hand_names_short(opphand2)
-	shortsuits1 = hand_suits_short(opphand1)
-	shortsuits2 = hand_suits_short(opphand2)
-	
+	leader_pos = board.leader_pos
+	trump_suit = board.trump_suit
+	cards_played = board.cards_played
 	print('')
-	for i in range(len(opphand1)):
+	for i in range(len(o1hand)):
 	
 		name1 = shortnames1[i]
 		name2 = shortnames2[i]
@@ -88,26 +80,25 @@ def print_opp_hand(hands, leader_pos, trump_suit = 'null', cards_played = []):
 		line = opp_hand_first_half(name1, suit1) + "\t"
 		
 		if i == 0 and did_play_card(cards_played, "p", leader_pos):
-			line += print_name_and_suit(cards_played, "p", leader_pos, partnerhand, dealerhand)
+			line += print_name_and_suit(cards_played, "p", leader_pos, phand, dhand)
 		
 		elif i == 2 and (did_play_card(cards_played, "o1", leader_pos) or did_play_card(cards_played, "o2", leader_pos)):
 			
 			if did_play_card(cards_played, "o1", leader_pos):
-				line += print_name_and_suit(cards_played, "o1", leader_pos, partnerhand, dealerhand)
+				line += print_name_and_suit(cards_played, "o1", leader_pos, phand, dhand)
 			line += "\t    "
 			if did_play_card(cards_played, "o2", leader_pos):
-				line += print_name_and_suit(cards_played, "o2", leader_pos, partnerhand, dealerhand)
+				line += print_name_and_suit(cards_played, "o2", leader_pos, phand, dhand)
 			else:
 				line += '\t'
 		
 		elif i == 4 and did_play_card(cards_played, "d", leader_pos):
-			line += print_name_and_suit(cards_played, "d", leader_pos, partnerhand, dealerhand)
+			line += print_name_and_suit(cards_played, "d", leader_pos, phand, dhand)
 		
 		else:
 			line += "\t\t"
 		
 		line += "  \t" + opp_hand_second_half(name2, suit2)
-		if i == 2:		line += "\tTrump = " + trump_suit.capitalize()
 		print(line)
 	print('')
 
@@ -126,23 +117,18 @@ def opp_hand_second_half(name, suit):
 	return(line)
 
 
-def print_dealer_hand(hands):
+def print_dealer_hand(board):
 	
-	partnerhand = hands[1]
-	dealerhand = hands[3]
+	dhand = board.pos_hand_dict['d']
 	line1 = "\t"
 	line2 = line1
 	
-	shortnames = hand_names_short(dealerhand)
-	shortsuits = hand_suits_short(dealerhand)
-	pshortnames = hand_names_short(partnerhand)
-	pshortsuits = hand_suits_short(partnerhand)	
+	shortnames = hand_names_short(dhand)
+	shortsuits = hand_suits_short(dhand)
 	
-	for i in range(len(dealerhand)):
+	for i in range(len(dhand)):
 		name = shortnames[i]
 		suit = shortsuits[i]
-		pname = pshortnames[i]
-		psuit = pshortsuits[i]
 		
 		line1 += "  " + suit
 		if name == "9":	line2 += "  " + name
@@ -198,8 +184,17 @@ def print_name_and_suit(cards_played, pos, leader_pos, partnerhand, dealerhand):
 	
 	return(line)	
 
-# TODO:
-# write this -- just add extra stuff at the bottom of each showturn
-# also add who the winner is
-def print_extras(trump_suit, ns_score, ew_score, caller_pos):
-	print('add in later')
+def print_extras(board):
+
+	line = 'NS score:  %i\t\t EW score:  %i\n' %(board.ns_score, board.ew_score)
+	line += 'NS tricks: %i\t\t EW tricks: %i\n\n' %(board.ntricks_ns, board.ntricks_ew)
+	line += 'Trump suit: **' + board.trump_suit.capitalize() + '**, called by: ' + board.caller_pos + '\n'
+	if board.going_alone:	line += '***THIS PLAYER IS GOING ALONE***' + '\n'
+	if board.called_first_round:	line += 'Called first round. ' 
+	else:				line += 'Called second round. '
+	line += 'Turn card was the ' + board.turn_card.name.capitalize() + ' of ' + board.turn_card.suit.capitalize() + '\n\n'
+	line += board.leader_pos + ' led this trick, and ' + board.winner_pos + ' is winning right now.\n'
+	line += '--------------------------------'
+	print(line)
+	
+

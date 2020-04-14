@@ -1,3 +1,37 @@
+# This file has been checked through, and it is compatible with the board and isleft/isright updates
+# It is also compatible with the "__str__" and "__eq__" updates
+# Most recent check: 12/6/2019
+#
+# functions contained in here (assume no args unless stated otherwise):
+# (1) "class card":		creates the entire card class
+#	(1a) ---"set_trump":		takes trumpsuit as arg and only sets self to trump if suit
+#					matches, or if it's the right/left. Sets isright/isleft appropriately
+#
+#	(1b) ---"copy":			makes an exact copy of the card, to avoid passing by reference errors
+#
+#	(1c) ---"remove_trump:		sets all trump-related attributes to False
+#
+#	(1d) ---"is_match":		compares another card with itself to see if name & suit match (not trump attributes tho)
+#	^This is now obsolete, all else needs to be adjusted around this
+#
+#	(1e) ---"print_card":		just an easily accessible way to print out the card, e.g. "ace of clubs (not trump)"
+#	^This is now obsolete, all else needs to be adjusted around this
+#
+#	(1f) ---"set_null":		sets name and suit to "null" and sets trump attributes to False
+#
+# (2) "create_deck": 		just makes a 24 card deck in order
+#
+# (3) "shuffle_deck":		takes a deck as arg, shuffles it in place
+#
+# (4) "deal":			calls the two deck args above, divides the shuffled deck into 4 hands and a kitty
+#
+# (5) "print_hand":		takes a card array as arg, prints each card out using the card.print_card fn
+#
+# (6) "same_color_suit":	takes a suit name as arg, returns the string of the suit of the same color
+#
+# (7) "order_hand":		takes a card array as required arg, trump suit as optional arg. Loops over all cards
+#				in the array and puts them in descending order by power (ace, king, queen, etc., putting
+#				the right and the left before the ace in the trump suit)
 import random
 
 class card:
@@ -6,17 +40,23 @@ class card:
 	istrump = False
 	isleft = False
 	isright = False
-	def __init__(self, cardname, cardsuit, cardistrump = False):
-		if cardname == "nine" or cardname == "ten" or cardname == "jack" or cardname == "queen" or cardname == "king" or cardname == "ace" or cardname == "null":
-			self.name = cardname
-		else:
-			print("error in card name")
-			exit(10)
-		if cardsuit == "clubs" or cardsuit == "diamonds" or cardsuit == "hearts" or cardsuit == "spades" or cardsuit == "null":
-			self.suit = cardsuit
-		else:
-			print("error in card suit")
-			exit(10)
+	def __init__(self, cardname, cardsuit, istrump = False, isleft = False, isright = False):
+		self.name = cardname
+		self.suit = cardsuit
+		self.istrump = istrump
+		self.isleft = isleft
+		self.isright = isright
+	
+	def __eq__(self, other):
+		if isinstance(other, card):
+			return(self.suit == other.suit and self.name == other.name)
+		return(False)
+	
+	def __str__(self):
+		line = self.name.capitalize() + ' of ' + self.suit.capitalize() + ' ('
+		if not self.istrump:	line += 'not '
+		line += 'trump)'
+		return(line)
 			
 	def set_trump(self, trumpsuit):
 		if trumpsuit == self.suit:
@@ -26,22 +66,15 @@ class card:
 		elif self.name == 'jack' and self.suit == same_color_suit(trumpsuit):
 			self.istrump = True
 			self.isleft = True
-			
+	
+	def copy(self):
+		c = card(self.name, self.suit, self.istrump, self.isleft, self.isright)
+		return(c)		
 
 	def remove_trump(self):
 		self.istrump = False
-			
-	def is_match(self, card):
-		if card.name == self.name and card.suit == self.suit:
-			return(True)
-		else:
-			return(False)
-
-	def print_card(self):
-		line = self.name + " of " + self.suit
-		if self.istrump:	line += " (trump)"
-		else:			line += " (not trump)"
-		print(line)
+		self.isleft = False
+		self.isright = False
 	
 	def set_null(self):
 		self.suit = "null"
@@ -55,30 +88,21 @@ def create_deck():
 	names = ["nine", "ten", "jack", "queen", "king", "ace"]
 	suits = ["clubs", "diamonds", "hearts", "spades"]
 	deck = []
-	for name in names:
-		for suit in suits:
-			thiscard = card(name, suit)
-			deck.append(thiscard)
+	
+	for n in names:
+		for s in suits:
+			c = card(n, s)
+			deck.append(c)
 	return(deck)
 
-def shuffle(deck):
-	random.shuffle(deck)
+def shuffle(deck):	random.shuffle(deck)
 
 def deal():
-
-	hand1 = []
-	hand2 = []
-	hand3 = []
-	hand4 = []
-	kitty = []
 	
 	deck = create_deck()
 	shuffle(deck)
 	
-	hand1 = deck[0:5]
-	hand2 = deck[5:10]
-	hand3 = deck[10:15]
-	hand4 = deck[15:20]
+	hand1, hand2, hand3, hand4 = [deck[(5*i):(5*(i+1))] for i in range(4)]
 	kitty = deck[20:]
 	
 	for hand in [hand1, hand2, hand3, hand4]:
@@ -89,7 +113,7 @@ def deal():
 
 def print_hand(hand):
 	for card in hand:
-		card.print_card()
+		print(card)
 	print
 
 def same_color_suit(suit):
@@ -100,79 +124,38 @@ def same_color_suit(suit):
 	if suit == "null":	return("null")
 
 def order_hand(hand, trump_suit = "null"):
+
+	# if it's all null, return exactly the hand
+	if sum([c.suit == 'null' for c in hand]) == 5:	return(hand)
+
 	new_hand = []
 	suits = ["clubs", "diamonds", "hearts", "spades"]
 	names = ["ace", "king", "queen", "jack", "ten", "nine"]
-	
-	
-	theright = card("jack", trump_suit)
-	theleft = card("jack", same_color_suit(trump_suit))
 
-	for suit in suits:
-		if suit == trump_suit:
-			for acard in hand:
-				if acard.is_match(theright):
-					new_hand.append(acard)
-			for acard in hand:
-				if acard.is_match(theleft):
-					new_hand.append(acard)
-			for name in names:
-				for acard in hand:
-					if acard.name == name and acard.suit == suit and acard.name != "jack":
-						new_hand.append(acard)
-			
+	for s in suits:
+		if s == trump_suit:
+			for c in hand:
+				if c.isright:	new_hand.append(c)
+			for c in hand:
+				if c.isleft:	new_hand.append(c)
+			for n in names:
+				for c in hand:
+					if c.name == n:
+						if c.suit == s:
+							if c.name != "jack":
+								new_hand.append(c)			
 		else:
-			for name in names:
-				for acard in hand:
-					if acard.name == name and acard.suit == suit and not (acard.name == "jack" and acard.suit == same_color_suit(trump_suit)):
-						new_hand.append(acard)
-						
+			for n in names:
+				for c in hand:
+					if c.name == n:
+						if c.suit == s:
+							if not c.isleft:
+								new_hand.append(c)						
 	for i in range(len(hand)):
 		hand[i] = new_hand[i]
 
-def hand_contains(hand, string, trump_suit = "null"):
-
-	suits = ['clubs', 'diamonds', 'hearts', 'spades']
-	cards = ['nine', 'ten', 'jack', 'queen', 'king', 'ace']
-	
-	if string in cards:
-		for card in hand:
-			if card.name == string:
-				return(True)
-		return(False)
-		
-	if string in suits:
-		for card in hand:
-			if card.suit == string:
-				return(True)
-		return(False)
-		
-	if string == 'right':
-		for card in hand:
-			if card.name == "jack" and card.suit == trump_suit:
-				return(True)
-		return(False)	
-	
-	if string == 'left':
-		for card in hand:
-			if card.name == "jack" and card.suit == same_color_suit(trump_suit):
-				return(True)
-		return(False)
-	
-	# non-trump ace
-#	if string == 'nta':
-	
-	print('invalid "contains" parameter')
-	exit(10)
-
-def make_copy(old_card):
-
-	c1 = card(old_card.name, old_card.suit)
-	if old_card.istrump:
-		c1.istrump = True
-		if old_card.isleft:	c1.isleft = True
-		if old_card.isright:	c1.isright = True
-	return(c1)
-	
-	
-
+def partner(pos):
+	if pos == 'o1':	return('o2')
+	if pos == 'p':	return('d')
+	if pos == 'o2':	return('o1')
+	if pos == 'd':	return('p')
