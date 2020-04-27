@@ -25,6 +25,7 @@ class boardstate:
 		self.show_each_turn = True
 		self.hand_result = 'null'
 		self.alert_no_call = True
+		self.reneg = [False, None]
 	
 	def run_quiet(self):
 		self.show_each_turn = False
@@ -101,7 +102,11 @@ class boardstate:
 		self.set_result(ns_delta, ew_delta)
 	
 	def set_result(self, ns_delta, ew_delta):
-		if ns_delta == 2:
+	
+		if self.reneg[0] == True:
+			if self.reneg[1] in ['p', 'd']:	self.hand_result = 'reneg by p/d'
+			else:					self.hand_result = 'reneg by o1/o2 (this is odd'
+		elif ns_delta == 2:
 			if self.caller_pos in ['o1', 'o2']:	self.hand_result = 'euchre by p/d'
 			else:				self.hand_result = 'sweep by p/d'
 		elif ew_delta == 2:
@@ -128,6 +133,7 @@ class boardstate:
 		self.ntricks_ns, self.ntricks_ew = [0, 0]
 		self.leader_pos, self.winner_pos = ['o1', 'o1']
 		self.winners = []
+		self.reneg = [False, None]
 	
 	def set_null(self):
 		self.done_with_hand()

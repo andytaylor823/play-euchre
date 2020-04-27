@@ -6,6 +6,15 @@ def add_points(board, just_return = False):
 	if len(board.winners) != 5:
 		print ('error in winners')
 		exit(10)	
+	
+	if board.reneg[0] == True:
+		p_ns, p_ew = [0,0]
+		if board.reneg[1] in ['p', 'd']:		p_ew = 2
+		elif board.reneg[1] in ['o1', 'o2']:	p_ns = 2
+		
+		if just_return:	return(p_ns, p_ew)
+		board.add_points(p_ns, p_ew)
+		return
 		
 	allpos = ['o1', 'p', 'o2', 'd']
 	num_tricks_ns = 0

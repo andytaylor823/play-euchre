@@ -65,8 +65,8 @@ def caller_awkward_spot(board, pos):
 	# "led_suits" should be max 3 items long, so seeing if an item is in that array is pretty fast
 	have = False
 	return_card = None
-	min_priority = 7
-	card_names = {'ace':1, 'king':2, 'queen':3, 'jack':4, 'ten':5, 'nine':6}
+	min_priority = 6
+	card_names = {'ace':1, 'king':2, 'queen':3, 'jack':4, 'ten':5, 'nine':6, 'null':7}
 	
 	# goes through each card in hand and each suit in led_suits
 	# approx 5x2 processes
@@ -145,6 +145,7 @@ def highest_remaining_trump(board, pos):
 				return(top_card, True)
 			else:
 				return(None, False)
+	return(None, False)
 
 # if you as the partner took 2 tricks already and your partner has zero (or even 1), lead trump to let them get the trick
 def carry_the_team(board, pos):

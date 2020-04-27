@@ -28,7 +28,7 @@ import numpy as np
 
 
 board = bsc.boardstate()
-board.run_quiet()
+#board.run_quiet()
 
 n = int(1e4)
 t1 = time.time()

@@ -233,6 +233,9 @@ def find_weakest_card(hand, trump_suit = 'null'):
 # this method is 5x faster than using numpy to look at 
 def absolute_weakest_card(hand):
 	sub_hand = [c for c in hand if c.suit != 'null']
+	if len(sub_hand) == 0:
+		print('ahhh, no non-null cards')
+		[print(c) for c in hand]
 	powers = [card_power(c) for c in sub_hand]
 	
 	idx = powers.index(min(powers))

@@ -18,7 +18,11 @@ def current_winner(pos, board):
 	# the leader is winning, and it's up to everyone else to beat them
 	winning_pos = board.leader_pos
 	winning_card = board.cards_played[0]
-
+	if board.cards_played[0].suit == 'null':
+		board.cards_played[0] = b.card('nine', 'clubs')
+		board.cards_played[0].set_trump(board.trump_suit)
+#		print('you had to fix something')
+		
 	# look at the rest of the cards
 	for i in range(1, len(board.cards_played)):
 		c = board.cards_played[i]
@@ -55,6 +59,7 @@ def pick_nonlead_card(board, pos):
 	
 	teamwinner, led_card, team_pos, have_highest_trump, followsuit, have_trump, n_tricks_won_team, n_tricks_remaining = current_state(board, pos, legal_hand)
 	n, have_2_above, have_3_above, c_2_above, c_3_above = trump_spot_winning_card(teamwinner, winning_card, legal_hand, board)
+	
 	
 	can_win, highest, lowest, lowest_winning = key_cards(pos, board, legal_hand)
 	if not can_win:						return(lowest)

@@ -7,7 +7,12 @@ import leading_logic
 def return_card(board, pos):
 	
 	for r in leading_alone_logic:
-		c = r.is_satisfied(board, pos)
+		try:
+			c = r.is_satisfied(board, pos)
+		except(TypeError):
+			print(r.name, r.rule_type, r.condition)
+			c = None
+			exit(10)
 		if c is not None:	return(c)
 	print('Error: no card returned to lead (alone)!')
 	raise(ValueError)

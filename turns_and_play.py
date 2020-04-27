@@ -40,7 +40,7 @@ def play_a_hand(board, forced_hands = [], forced_hand_positions = [], prevent_fi
 	points.add_points(board)
 	if board.show_each_turn:	print(board.hand_result.capitalize())
 
-def setup(board, forced_hands, forced_hand_positions, prevent_firstround_callers, prevent_secondround_callers, enable_alone):
+def setup(board, forced_hands=[], forced_hand_positions=[], prevent_firstround_callers=[], prevent_secondround_callers=[], enable_alone=True):
 
 	# create a deck and deal out the cards
 	hands = fh.hands(forced_hands, forced_hand_positions)
